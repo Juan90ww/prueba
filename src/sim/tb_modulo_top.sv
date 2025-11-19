@@ -1,4 +1,4 @@
-module tb_divisor;
+module tb_modulo_top;
 
     logic clk;
     logic rst_n;
