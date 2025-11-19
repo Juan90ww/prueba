@@ -1,31 +1,27 @@
-module tb_divisor_7bit;
-
-    timeunit 1ns; timeprecision 1ps;
+module tb_divisor;
 
     logic clk;
     logic rst_n;
     logic start;
     logic [6:0] A, B;
-
     logic [6:0] Q, R;
-    logic done, busy;
-
-    // Clock 10ns
-    always #5 clk = ~clk;
+    logic done;
 
     divisor_7bit dut (
         .clk(clk),
         .rst_n(rst_n),
         .start(start),
-        .dividendo(A),
-        .divisor(B),
-        .cociente(Q),
-        .residuo(R),
-        .done(done),
-        .busy(busy)
+        .A(A),
+        .B(B),
+        .Q(Q),
+        .R(R),
+        .done(done)
     );
 
-    task do_test(input [6:0] a, input [6:0] b);
+    // clock
+    always #5 clk = ~clk;
+
+    task run_test(input int a, input int b);
     begin
         A = a;
         B = b;
@@ -33,34 +29,31 @@ module tb_divisor_7bit;
         @(posedge clk);
         start = 0;
 
-        wait(done);
-        $display("DIVISION: %0d / %0d = COCIENTE %0d, RESIDUO %0d",
-                 a, b, Q, R);
+        wait (done);
+
+        $display("A=%0d  B=%0d  =>  Q=%0d  R=%0d", A, B, Q, R);
         @(posedge clk);
     end
     endtask
 
     initial begin
-        $dumpfile("div_7bit.vcd");
-        $dumpvars(0, tb_divisor_7bit);
-
         clk = 0;
         rst_n = 0;
         start = 0;
         @(posedge clk);
         rst_n = 1;
-        @(posedge clk);
 
-        $display("===== CASO 1: 50 / 5 =====");
-        do_test(50, 5);
+        // Caso 1
+        run_test(0, 5);
 
-        $display("===== CASO 2: 100 / 7 =====");
-        do_test(100, 7);
+        // Caso 2
+        run_test(123, 3);
 
-        $display("===== CASO 3: 127 / 3 =====");
-        do_test(127, 3);
+        // Caso 3
+        run_test(127, 7);
 
         $finish;
     end
 
 endmodule
+
