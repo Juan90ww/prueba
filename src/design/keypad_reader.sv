@@ -1,101 +1,113 @@
 module keypad_reader (
-    input  logic clk,
-    input  logic rst_n,
+    input  logic        clk,
+    input  logic        rst_n,
 
-    // Señales hacia el teclado
-    output logic [3:0] filas,
-    input  logic [3:0] columnas,
+    output logic [3:0]  filas,
+    input  logic [3:0]  columnas,
 
-    output logic [3:0] key_value,  // valor de tecla (0–15)
-    output logic       key_valid   // pulso 1 cuando hay tecla nueva
+    output logic [3:0]  key_value,
+    output logic        key_valid
 );
 
-    logic [3:0] col_clean;
-    genvar i;
+    // --------------------------------------------------------
+    // GENERACIÓN DEL ESCANEO DE FILAS (1 activa por vez)
+    // --------------------------------------------------------
 
-    // Debounce para columnas
-    generate
-        for (i = 0; i < 4; i++) begin
-            debouncer db_col (
-                .clk(clk),
-                .rst_n(rst_n),
-                .noisy_in(columnas[i]),
-                .clean_out(col_clean[i])
-            );
-        end
-    endgenerate
+    logic [1:0] row_sel;
 
-    // Estado actual de fila a activar
-    logic [1:0] fila_sel;
-    logic [3:0] reg_filas;
-
-    // Multiplexado de filas
     always_ff @(posedge clk or negedge rst_n) begin
         if (!rst_n)
-            fila_sel <= 0;
+            row_sel <= 0;
         else
-            fila_sel <= fila_sel + 1;
+            row_sel <= row_sel + 1;
     end
 
     always_comb begin
-        case (fila_sel)
-            2'd0: reg_filas = 4'b1110;
-            2'd1: reg_filas = 4'b1101;
-            2'd2: reg_filas = 4'b1011;
-            2'd3: reg_filas = 4'b0111;
+        case (row_sel)
+            2'd0: filas = 4'b1110; // fila 0 activa
+            2'd1: filas = 4'b1101; // fila 1
+            2'd2: filas = 4'b1011; // fila 2
+            2'd3: filas = 4'b0111; // fila 3
         endcase
-        filas = reg_filas;
     end
 
-    // Detección de tecla
-    logic [3:0] tecla_raw;
-    logic valid_raw;
+    // --------------------------------------------------------
+    // DETECCIÓN (sin rebote por ahora)
+    // --------------------------------------------------------
 
-    always_comb begin
-        valid_raw = 0;
-        tecla_raw = 4'd0;
-
-        if (col_clean != 4'b1111) begin
-            valid_raw = 1;
-
-            casex ({fila_sel, col_clean})
-                6'b00_1110: tecla_raw = 1;
-                6'b00_1101: tecla_raw = 2;
-                6'b00_1011: tecla_raw = 3;
-                6'b00_0111: tecla_raw = 'hA;  // A = enviar
-
-                6'b01_1110: tecla_raw = 4;
-                6'b01_1101: tecla_raw = 5;
-                6'b01_1011: tecla_raw = 6;
-                6'b01_0111: tecla_raw = 'hB;
-
-                6'b10_1110: tecla_raw = 7;
-                6'b10_1101: tecla_raw = 8;
-                6'b10_1011: tecla_raw = 9;
-                6'b10_0111: tecla_raw = 'hC;
-
-                6'b11_1110: tecla_raw = '*;
-                6'b11_1101: tecla_raw = 0;
-                6'b11_1011: tecla_raw = '#;
-                6'b11_0111: tecla_raw = 'hD;
-            endcase
-        end
-    end
-
-    // Registro de salida de una tecla estable (un solo pulso)
-    logic valid_d;
+    logic [3:0] col_sample;
+    logic       pressed;
 
     always_ff @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
-            valid_d <= 0;
-            key_valid <= 0;
-            key_value <= 0;
+            col_sample <= 4'hF;
         end else begin
-            valid_d <= valid_raw;
-            key_valid <= valid_raw & ~valid_d;  // flanco de subida
-            if (valid_raw & ~valid_d)
-                key_value <= tecla_raw;
+            col_sample <= columnas;
         end
     end
 
+    assign pressed = (col_sample != 4'hF);
+
+    // --------------------------------------------------------
+    // DECODIFICACIÓN DE TECLA
+    // --------------------------------------------------------
+
+    logic [3:0] decode;
+
+    always_comb begin
+        decode = 4'hF;
+
+        case (row_sel)
+            2'd0: begin
+                case (col_sample)
+                    4'b1110: decode = 4'd1;
+                    4'b1101: decode = 4'd2;
+                    4'b1011: decode = 4'd3;
+                    4'b0111: decode = 4'hA; // ENTER
+                endcase
+            end
+
+            2'd1: begin
+                case (col_sample)
+                    4'b1110: decode = 4'd4;
+                    4'b1101: decode = 4'd5;
+                    4'b1011: decode = 4'd6;
+                    4'b0111: decode = 4'hB;
+                endcase
+            end
+
+            2'd2: begin
+                case (col_sample)
+                    4'b1110: decode = 4'd7;
+                    4'b1101: decode = 4'd8;
+                    4'b1011: decode = 4'd9;
+                    4'b0111: decode = 4'hC;
+                endcase
+            end
+
+            2'd3: begin
+                case (col_sample)
+                    4'b1110: decode = 4'd0;
+                    4'b1101: decode = 4'hD;
+                    4'b1011: decode = 4'hE;
+                    4'b0111: decode = 4'hF;
+                endcase
+            end
+        endcase
+    end
+
+
+    logic pressed_prev;
+
+    always_ff @(posedge clk or negedge rst_n) begin
+        if (!rst_n)
+            pressed_prev <= 0;
+        else
+            pressed_prev <= pressed;
+    end
+
+    assign key_valid = (pressed && !pressed_prev);
+    assign key_value = decode;
+
 endmodule
+
