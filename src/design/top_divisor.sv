@@ -1,0 +1,111 @@
+module top_divisor(
+    input  logic clk,
+    input  logic rst,
+
+    input  logic [3:0] fil,
+    output logic [3:0] col,
+
+    output logic [3:0] anodo,
+    output logic [6:0] seven
+);
+
+    //-----------------------------------------
+    // 1) Debounce
+    //-----------------------------------------
+    logic [3:0] filas_db;
+    debounce d0(.clk(clk), .rst(rst), .key(fil[0]), .key_pressed(filas_db[0]));
+    debounce d1(.clk(clk), .rst(rst), .key(fil[1]), .key_pressed(filas_db[1]));
+    debounce d2(.clk(clk), .rst(rst), .key(fil[2]), .key_pressed(filas_db[2]));
+    debounce d3(.clk(clk), .rst(rst), .key(fil[3]), .key_pressed(filas_db[3]));
+
+    //-----------------------------------------
+    // 2) Keypad scanning
+    //-----------------------------------------
+    logic [3:0] tecla_hex;
+    teclado tecla_inst(
+        .clk(clk), .filas(filas_db), .columnas(col), .boton(tecla_hex)
+    );
+
+    //-----------------------------------------
+    // 3) FSM SCAN/LOAD/RELEASE
+    //-----------------------------------------
+    logic tecla_activa = (filas_db != 4'b1111);
+    typedef enum logic [1:0] {SCAN, LOAD, RELEASE} st_t;
+    st_t est, next;
+
+    always_comb begin
+        next = est;
+        case (est)
+            SCAN:    if (tecla_activa && tecla_hex!=4'b1111) next = LOAD;
+            LOAD:    next = RELEASE;
+            RELEASE: if (!tecla_activa) next = SCAN;
+        endcase
+    end
+
+    logic tecla_valida;
+
+    always_ff @(posedge clk or negedge rst) begin
+        if (!rst) begin
+            est <= SCAN;
+            tecla_valida <= 0;
+        end else begin
+            est <= next;
+            tecla_valida <= (est == LOAD);
+        end
+    end
+
+    //-----------------------------------------
+    // 4) Captura operandos
+    //-----------------------------------------
+    logic [6:0] A_bin, B_bin;
+    logic operands_ready;
+
+    captura_operandos capt(
+        .clk(clk), .rst(rst),
+        .tecla(tecla_hex),
+        .tecla_valida(tecla_valida),
+        .A_bin(A_bin),
+        .B_bin(B_bin),
+        .ready_operands(operands_ready)
+    );
+
+    //-----------------------------------------
+    // 5) Divisor
+    //-----------------------------------------
+    logic [6:0] Cociente, Residuo;
+    logic div_done;
+
+    divisor_restoring divi(
+        .clk(clk), .rst(rst),
+        .start(operands_ready),
+        .A_in(A_bin), .B_in(B_bin),
+        .Q(Cociente), .R(Residuo),
+        .done(div_done)
+    );
+
+    //-----------------------------------------
+    // 6) Conversor BCD
+    //-----------------------------------------
+    logic [3:0] d3,d2,d1,d0;
+    logic bcd_done;
+
+    bin2bcd #(.N(7)) conv(
+        .clk(clk), .rst(rst),
+        .start(div_done),
+        .bin(Cociente), // muestra cociente (puedes cambiar a R para residuo)
+        .bcd3(d3), .bcd2(d2), .bcd1(d1), .bcd0(d0),
+        .done(bcd_done)
+    );
+
+    //-----------------------------------------
+    // 7) Display
+    //-----------------------------------------
+    logic [15:0] digito = {d3,d2,d1,d0};
+
+    display_7seg mux(
+        .clk(clk), .rst(rst),
+        .digito(digito),
+        .anodo(anodo), .seven(seven)
+    );
+
+endmodule
