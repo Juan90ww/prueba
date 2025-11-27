@@ -13,7 +13,7 @@ module tb_divisor_auto;
     // reloj 10ns
     always #5 clk = ~clk;
 
-    divisor_restoring uut (
+    divisor_restoring_7bits uut (
         .clk(clk),
         .rst(rst),
         .start(start),
