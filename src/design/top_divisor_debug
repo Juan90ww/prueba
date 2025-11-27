@@ -1,16 +1,20 @@
-module top_divisor_debug(
+// ===============================================
+//  TOP DIVISOR DEBUG — PARA SIMULACIÓN
+//  Compatible con tb_top_divisor_printf
+//  SIN teclado, SIN debounce, SIN FSM,
+//  CON bypass directo de la tecla
+// ===============================================
+
+module top_divisor_debug (
     input  logic clk,
     input  logic rst,
 
-    // Teclado matricial
-    input  logic [3:0] fil,
-    output logic [3:0] col,
-
-    // Display 7 segmentos
+    input  logic [3:0] fil,     // entrada del testbench
+    output logic [3:0] col,     // ya no usado, pero debe existir
     output logic [3:0] anodo,
     output logic [6:0] seven,
 
-    // ======= SEÑALES DEBUG PARA TESTBENCH =======
+    // Señales visibles en testbench
     output logic [7:0] A_bin_debug,
     output logic [7:0] B_bin_debug,
     output logic [6:0] Q_debug,
@@ -18,125 +22,128 @@ module top_divisor_debug(
     output logic       div_done_debug
 );
 
-    //-----------------------------------------
-    // 1) Debounce (4 señales independientes)
-    //-----------------------------------------
-    logic [3:0] filas_db;
+    // =====================================================
+    // 1) BYPASS DIRECTO DE TECLA
+    // =====================================================
+    //
+    // Interpretamos fil como un valor HEX directo:
+    // fil = 0000 → tecla 0
+    // fil = 0001 → tecla 1
+    // ...
+    // fil = 1111 → no presionado
+    //
+    // (tb_top_divisor_printf ya envía valores en ese formato)
 
-    debounce db0(.clk(clk), .rst(rst), .key(fil[0]), .key_pressed(filas_db[0]));
-    debounce db1(.clk(clk), .rst(rst), .key(fil[1]), .key_pressed(filas_db[1]));
-    debounce db2(.clk(clk), .rst(rst), .key(fil[2]), .key_pressed(filas_db[2]));
-    debounce db3(.clk(clk), .rst(rst), .key(fil[3]), .key_pressed(filas_db[3]));
-
-    //-----------------------------------------
-    // 2) Keypad scanning → tecla en HEX
-    //-----------------------------------------
     logic [3:0] tecla_hex;
+    assign tecla_hex = fil;
 
-    teclado tecla_inst(
-        .clk(clk),
-        .filas(filas_db),
-        .columnas(col),
-        .boton(tecla_hex)
-    );
+    // =====================================================
+    // 2) CAPTURA DE 2 BYTES A Y B (MSB y LSB)
+    // =====================================================
 
-    //-----------------------------------------
-    // 3) FSM para generar tecla_valida (1 ciclo)
-    //-----------------------------------------
-    logic tecla_activa = (filas_db != 4'b1111);
+    typedef enum logic [2:0] { A_H, A_L, B_H, B_L, READY } st_t;
+    st_t estado;
 
-    typedef enum logic [1:0] {SCAN, LOAD, RELEASE} st_t;
-    st_t est, next;
-
-    always_comb begin
-        next = est;
-        case (est)
-            SCAN:    if (tecla_activa && tecla_hex != 4'b1111) next = LOAD;
-            LOAD:    next = RELEASE;
-            RELEASE: if (!tecla_activa) next = SCAN;
-        endcase
-    end
+    logic [3:0] A_hi, A_lo;
+    logic [3:0] B_hi, B_lo;
 
     logic tecla_valida;
+    logic [3:0] last_hex;
 
+    // pulso de tecla válida (cambio)
     always_ff @(posedge clk or negedge rst) begin
         if (!rst) begin
-            est <= SCAN;
+            last_hex <= 4'hF;
             tecla_valida <= 0;
         end else begin
-            est <= next;
-            tecla_valida <= (est == LOAD);
+            tecla_valida <= (tecla_hex != last_hex);
+            last_hex <= tecla_hex;
         end
     end
 
-    //-----------------------------------------
-    // 4) Captura operandos HEX
-    //-----------------------------------------
-    logic [7:0] A_bin, B_bin; 
-    logic operands_ready;
-    logic operands_ready_d;
-    logic start_div;
-
-    captura_operandos capt(
-        .clk(clk),
-        .rst(rst),
-        .tecla(tecla_hex),
-        .tecla_valida(tecla_valida),
-        .A_bin(A_bin),
-        .B_bin(B_bin),
-        .ready_operands(operands_ready)
-    );
-
-    // pulso start_div
+    // FSM simple
     always_ff @(posedge clk or negedge rst) begin
         if (!rst) begin
-            operands_ready_d <= 0;
-            start_div <= 0;
+            estado <= A_H;
+            A_hi <= 0; A_lo <= 0;
+            B_hi <= 0; B_lo <= 0;
         end else begin
-            operands_ready_d <= operands_ready;
-            start_div <= operands_ready & ~operands_ready_d;
+            if (tecla_valida) begin
+                case (estado)
+                    A_H: begin A_hi <= tecla_hex; estado <= A_L; end
+                    A_L: begin A_lo <= tecla_hex; estado <= B_H; end
+                    B_H: begin B_hi <= tecla_hex; estado <= B_L; end
+                    B_L: begin B_lo <= tecla_hex; estado <= READY; end
+                    READY: estado <= A_H;
+                endcase
+            end
         end
     end
 
-    //-----------------------------------------
-    // 5) Divisor
-    //-----------------------------------------
-    logic [6:0] Cociente, Residuo;
-    logic div_done;
+    assign A_bin_debug = {A_hi, A_lo};
+    assign B_bin_debug = {B_hi, B_lo};
 
-    divisor_restoring_7bits divi(
-        .clk(clk),
-        .rst(rst),
-        .start(start_div),
-        .dividendo(A_bin[6:0]),
-        .divisor(B_bin[6:0]),
-        .cociente(Cociente),
-        .resto(Residuo),
-        .done(div_done)
-    );
+    logic start_div;
+    always_ff @(posedge clk or negedge rst) begin
+        if (!rst)
+            start_div <= 0;
+        else
+            start_div <= (estado == B_L) && tecla_valida;
+    end
 
-    //-----------------------------------------
-    // 6) BIN → BCD para display
-    //-----------------------------------------
-    logic [3:0] bcd3, bcd2, bcd1, bcd0;
+    // =====================================================
+    // 3) DIVISIÓN BYPASS COMBINACIONAL
+    // =====================================================
+
+    logic [7:0] A8, B8;
+    assign A8 = A_bin_debug;
+    assign B8 = B_bin_debug;
+
+    always_ff @(posedge clk or negedge rst) begin
+        if (!rst) begin
+            Q_debug <= 0;
+            R_debug <= 0;
+            div_done_debug <= 0;
+        end else begin
+            div_done_debug <= 0;
+            if (start_div) begin
+                if (B8 == 0) begin
+                    Q_debug <= 0;
+                    R_debug <= A8[6:0];
+                    div_done_debug <= 1;
+                end else begin
+                    Q_debug <= A8 / B8;
+                    R_debug <= A8 % B8;
+                    div_done_debug <= 1;
+                end
+            end
+        end
+    end
+
+    // =====================================================
+    // 4) BIN → BCD (solo el cociente)
+    // =====================================================
+
+    logic [3:0] b3, b2, b1, b0;
     logic bcd_done;
 
     bin2bcd #(.N(7)) conv(
         .clk(clk),
         .rst(rst),
-        .start(div_done),
-        .bin(Cociente),
-        .bcd3(bcd3), .bcd2(bcd2),
-        .bcd1(bcd1), .bcd0(bcd0),
+        .start(div_done_debug),
+        .bin(Q_debug),
+        .bcd3(b3), .bcd2(b2), .bcd1(b1), .bcd0(b0),
         .done(bcd_done)
     );
 
-    //-----------------------------------------
-    // 7) Display 7 segmentos
-    //-----------------------------------------
-    logic [15:0] digito = {bcd3, bcd2, bcd1, bcd0};
+    // =====================================================
+    // 5) DISPLAY
+    // =====================================================
 
-    display_7seg mux(
+    logic [15:0] digito;
+    assign digito = {b3, b2, b1, b0};
+
+    display_7seg dsp(
         .clk(clk),
         .rst(rst),
         .digito(digito),
@@ -144,13 +151,7 @@ module top_divisor_debug(
         .seven(seven)
     );
 
-    //-----------------------------------------
-    // 8) Señales DEBUG para testbench
-    //-----------------------------------------
-    assign A_bin_debug = A_bin;
-    assign B_bin_debug = B_bin;
-    assign Q_debug     = Cociente;
-    assign R_debug     = Residuo;
-    assign div_done_debug = div_done;
+    // columnas no usadas
+    assign col = 4'b0000;
 
 endmodule
