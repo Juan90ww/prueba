@@ -14,7 +14,7 @@ module tb_top_divisor;
     always #5 clk = ~clk;
 
     // DUT: divisor_restoring
-    divisor_restoring_7bits uut (
+    divisor_restoring_7bits dut (
         .clk(clk),
         .rst(rst),
         .start(start),
