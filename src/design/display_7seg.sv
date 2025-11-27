@@ -1,45 +1,26 @@
-module display_7seg (
-    input  logic        clk,
-    input  logic        rst,
-    input  logic [15:0] digito,
-    output logic [3:0]  anodo,
-    output logic [6:0]  seven
+module display_bin_hex (
+    input  logic [3:0] switch,
+    output logic [6:0] seven
 );
-    logic [1:0] anodo_selec;
-    logic [3:0] data;
-    logic [15:0] contador;
-
-    // Inicialización por seguridad (sólo para simulación/FPGA sin reset externo)
-    initial begin
-        anodo_selec = 2'd0;
-        contador = 16'd0;
-    end
-
-    always_ff @(posedge clk or negedge rst) begin
-        if (!rst) begin
-            contador <= 0;
-            anodo_selec <= 0;
-        end else begin
-            contador <= contador + 1;
-            if (contador == 1350) begin
-                contador <= 0;
-                anodo_selec <= anodo_selec + 1;
-            end
-        end
-    end
-
     always_comb begin
-        // Por defecto
-        anodo = 4'b1111;
-        data  = 4'd0;
-        case (anodo_selec)
-            2'b00: begin anodo = 4'b1110; data = digito[3:0]; end
-            2'b01: begin anodo = 4'b1101; data = digito[7:4]; end
-            2'b10: begin anodo = 4'b1011; data = digito[11:8]; end
-            2'b11: begin anodo = 4'b0111; data = digito[15:12]; end
+        seven = 7'b1111111;
+        case (switch)
+            4'h0: seven = 7'b0000001;
+            4'h1: seven = 7'b1001111;
+            4'h2: seven = 7'b0010010;
+            4'h3: seven = 7'b0000110;
+            4'h4: seven = 7'b1001100;
+            4'h5: seven = 7'b0100100;
+            4'h6: seven = 7'b0100000;
+            4'h7: seven = 7'b0001111;
+            4'h8: seven = 7'b0000000;
+            4'h9: seven = 7'b0000100;
+            4'hA: seven = 7'b0001000;
+            4'hB: seven = 7'b1100000;
+            4'hC: seven = 7'b0110001;
+            4'hD: seven = 7'b1000010;
+            4'hE: seven = 7'b0110000;
+            4'hF: seven = 7'b1111111; 
         endcase
     end
-
-    display_bin_hex display_inst(.switch(data), .seven(seven));
-
 endmodule
