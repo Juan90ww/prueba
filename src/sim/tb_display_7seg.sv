@@ -22,9 +22,9 @@ module tb_display_7seg;
         $dumpfile("tb_display_7seg.vcd");
         $dumpvars(0,tb_display_7seg);
 
-        rst=0;
+        rst = 0;
         digito = 16'h0123;
-        #20 rst=1;
+        #20 rst = 1;
 
         #20000 digito = 16'h9876;
         #20000 digito = 16'hFACE;
