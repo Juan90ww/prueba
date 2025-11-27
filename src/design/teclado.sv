@@ -1,5 +1,6 @@
 module teclado #(
-    parameter int SCAN_DIV = 13500
+    parameter int SCAN_DIV = 50;
+
 )(
     input  logic clk,
     input  logic [3:0] filas,
