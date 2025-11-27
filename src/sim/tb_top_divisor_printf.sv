@@ -5,7 +5,7 @@ module tb_top_divisor_printf;
     logic clk = 0;
     logic rst = 0;
 
-    logic [3:0] fil;
+    logic [3:0] fil = 4'b1111;
     wire  [3:0] col;
 
     wire [3:0] anodo;
@@ -23,75 +23,69 @@ module tb_top_divisor_printf;
     // Clock 50 MHz
     always #10 clk = ~clk;
 
-    // ============================================================
-    // SIMULAR UNA TECLA:
-    //  Bajamos una fila, dependiendo de la columna activa
-    // ============================================================
+    // =====================================================
+    // ESPERAR A QUE EL TECLADO ACTIVE UNA COLUMNA ESPECÍFICA
+    // =====================================================
+    task wait_column(input [3:0] colcode);
+        while (dut.col !== colcode)
+            @(posedge clk);
+    endtask
+
+    // =====================================================
+    // SIMULAR TECLA HEX
+    // =====================================================
     task press_key(input [3:0] hex);
         begin
-            // Esperar a que el módulo teclado seleccione una columna
-            repeat (4000) @(posedge clk);
-
-            // Forzamos filas en función del key requested
             case(hex)
-                4'h1: fil = 4'b0111;
-                4'h2: fil = 4'b0111;
-                4'h3: fil = 4'b0111;
+                4'h1: begin wait_column(4'b1110); fil = 4'b0111; end
+                4'h2: begin wait_column(4'b1101); fil = 4'b0111; end
+                4'h3: begin wait_column(4'b1011); fil = 4'b0111; end
 
-                4'h4: fil = 4'b1011;
-                4'h5: fil = 4'b1011;
-                4'h6: fil = 4'b1011;
+                4'h4: begin wait_column(4'b1110); fil = 4'b1011; end
+                4'h5: begin wait_column(4'b1101); fil = 4'b1011; end
+                4'h6: begin wait_column(4'b1011); fil = 4'b1011; end
 
-                4'h7: fil = 4'b1101;
-                4'h8: fil = 4'b1101;
-                4'h9: fil = 4'b1101;
+                4'h7: begin wait_column(4'b1110); fil = 4'b1101; end
+                4'h8: begin wait_column(4'b1101); fil = 4'b1101; end
+                4'h9: begin wait_column(4'b1011); fil = 4'b1101; end
 
-                4'h0: fil = 4'b1110;
-
-                4'hA: fil = 4'b1110;
-                4'hB: fil = 4'b1110;
-                4'hC: fil = 4'b1110;
-                4'hD: fil = 4'b1110;
+                4'h0: begin wait_column(4'b0111); fil = 4'b1110; end
 
                 default: fil = 4'b1111;
             endcase
 
-            // Tiempo de presión
-            repeat (5000) @(posedge clk);
+            // mantener la tecla presionada
+            repeat (3000) @(posedge clk);
 
-            // Liberar tecla
+            // soltar tecla
             fil = 4'b1111;
-            repeat (5000) @(posedge clk);
+            repeat (3000) @(posedge clk);
         end
     endtask
 
-    task send_hex(input [7:0] val);
-        begin
-            press_key(val[7:4]); // MSB
-            press_key(val[3:0]); // LSB
-        end
+    // Secuencia HEX de dos dígitos
+    task send_hex(input [7:0] value);
+        press_key(value[7:4]);
+        press_key(value[3:0]);
     endtask
 
-    // ============================================================
+
+    // =====================================================
     // TEST
-    // ============================================================
+    // =====================================================
     initial begin
         $dumpfile("tb_top_divisor_printf.vcd");
         $dumpvars(0, tb_top_divisor_printf);
 
-        fil = 4'b1111;
-
+        rst = 0;
         #100;
         rst = 1;
         #1000;
 
-        // ===========================
-        //  TEST 1:  A = 0x45 , B = 0x07
-        // ===========================
         $display("\n=== TEST 1: A=0x45, B=0x07 ===");
 
-        send_hex(8'h45); // A
-        send_hex(8'h07); // B
+        send_hex(8'h45);
+        send_hex(8'h07);
 
         wait (dut.div_done == 1);
 
@@ -100,24 +94,7 @@ module tb_top_divisor_printf;
             dut.Cociente, dut.Residuo);
 
         #10000;
-
-        // ===========================
-        //  TEST 2:  A = 0x7E , B = 0x09
-        // ===========================
-        $display("\n=== TEST 2: A=0x7E, B=0x09 ===");
-
-        send_hex(8'h7E); // A
-        send_hex(8'h09); // B
-
-        wait (dut.div_done == 1);
-
-        $display("A=%0d  B=%0d  Q=%0d  R=%0d",
-            dut.A_bin, dut.B_bin,
-            dut.Cociente, dut.Residuo);
-
-        #50000;
-
-        $display("\nFIN SIMULACIÓN TOP DIVISOR");
+        $display("\nFIN SIMULACIÓN");
         $finish;
     end
 
