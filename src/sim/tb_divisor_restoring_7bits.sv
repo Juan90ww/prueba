@@ -1,6 +1,6 @@
 `timescale 1ns/1ps
 
-module divisor_restoring_7bits;
+module tb_divisor_restoring_7bits;
 
     logic clk = 0;
     logic rst = 0;
