@@ -21,7 +21,7 @@ module tb_top_divisor;
     //-----------------------------------------
     // 2) Instanciar SOLO el divisor
     //-----------------------------------------
-    divisor_restoring dut (
+    divisor_restoring_7bits dut (
         .clk(clk),
         .rst(rst),
         .start(start_div),
@@ -61,7 +61,7 @@ module tb_top_divisor;
     // 4) Secuencia principal
     //-----------------------------------------
     initial begin
-        $dumpfile("tb_top_divisor_auto.vcd");
+        $dumpfile("tb_top_divisor.vcd");
         $dumpvars(0, tb_top_divisor_auto);
 
         rst = 0;
