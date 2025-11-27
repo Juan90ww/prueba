@@ -1,6 +1,6 @@
 `timescale 1ns/1ps
 
-module tb_divisor_restoring;
+module tb_divisor_restoring_7bits;
 
     logic clk, rst, start;
     logic [6:0] A, B;
@@ -35,8 +35,8 @@ module tb_divisor_restoring;
     endtask
 
     initial begin
-        $dumpfile("tb_divisor_restoring.vcd");
-        $dumpvars(0, tb_divisor_restoring);
+        $dumpfile("tb_divisor_restoring_7bits.vcd");
+        $dumpvars(0, tb_divisor_restoring_7bits);
 
         clk = 0; rst = 0; start = 0;
         repeat(4) @(posedge clk);
