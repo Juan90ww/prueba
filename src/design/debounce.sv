@@ -57,4 +57,4 @@ module debounce (
             key_pressed <= key_stable ? 1'b1 : 1'b0;
         end
     end
-endmodul
+endmodule
