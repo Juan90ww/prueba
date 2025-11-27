@@ -14,7 +14,7 @@ CONSTRAINTS = ../constr/Modulo_Pines.cst
 
 # Nombre del módulo top (sin extensión)
 TOP_DESIGN = top
-TOP_TB     = tb_registro
+TOP_TB = tb_top_divisor
 
 # Testbench por defecto (top-level)
 TESTBENCH = ../sim/$(TOP_TB).sv
