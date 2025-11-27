@@ -1,6 +1,6 @@
 `timescale 1ns/1ps
 
-module tb_divisor_auto;
+module tb_divisor_restoring;
 
     logic clk = 0;
     logic rst = 0;
@@ -10,32 +10,30 @@ module tb_divisor_auto;
     logic [6:0] Q, R;
     logic done;
 
-    // reloj 10ns
     always #5 clk = ~clk;
 
-    divisor_restoring_7bits uut (
+    divisor_restoring_7bits dut(
         .clk(clk),
         .rst(rst),
         .start(start),
-        .A_in(A_in),
-        .B_in(B_in),
-        .Q(Q),
-        .R(R),
+        .dividendo(A_in),
+        .divisor(B_in),
+        .cociente(Q),
+        .resto(R),
         .done(done)
     );
 
     initial begin
-        $dumpfile("tb_divisor_auto.vcd");
-        $dumpvars(0, tb_divisor_auto);
+        $dumpfile("tb_divisor_restoring.vcd");
+        $dumpvars(0, tb_divisor_restoring);
 
-        rst = 0;
-        start = 0;
+        rst = 0; start = 0;
         #20 rst = 1;
 
-        test_case( 7 , 2 );
-        test_case( 50, 7 );
-        test_case( 99, 5 );
-        test_case(120, 10 );
+        test_case(  7 ,  2 );
+        test_case( 50 ,  7 );
+        test_case( 99 ,  5 );
+        test_case(120 , 10 );
 
         $display("FIN DE SIMULACION DIVISOR");
         $finish;
@@ -47,11 +45,12 @@ module tb_divisor_auto;
             A_in = A;
             B_in = B;
             start = 1;
-            @(posedge clk);
-            start = 0;
+            @(posedge clk) start = 0;
 
             wait(done);
-            $display("A=%0d B=%0d  => Q=%0d R=%0d", A_in,B_in,Q,R);
+
+            $display("A=%0d B=%0d => Q=%0d R=%0d", 
+                A_in, B_in, Q, R);
         end
     endtask
 
