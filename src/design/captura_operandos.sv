@@ -22,9 +22,6 @@ module captura_operandos(
     logic [3:0] A_hi, A_lo;
     logic [3:0] B_hi, B_lo;
 
-    //==============================
-    // FSM NEXT
-    //==============================
     always_comb begin
         next = estado;
         case (estado)
@@ -32,13 +29,10 @@ module captura_operandos(
             A_LSB: if (tecla_valida) next = B_MSB;
             B_MSB: if (tecla_valida) next = B_LSB;
             B_LSB: if (tecla_valida) next = READY;
-            READY: if (tecla_valida) next = A_MSB;  // <-- FIX
+            READY: if (tecla_valida) next = A_MSB;
         endcase
     end
 
-    //==============================
-    // FSM + registros
-    //==============================
     always_ff @(posedge clk or negedge rst) begin
         if (!rst) begin
             estado <= A_MSB;
@@ -46,7 +40,6 @@ module captura_operandos(
             B_hi <= 0; B_lo <= 0;
         end else begin
             estado <= next;
-
             if (tecla_valida) begin
                 case (estado)
                     A_MSB: A_hi <= tecla;
@@ -58,13 +51,8 @@ module captura_operandos(
         end
     end
 
-    //==============================
-    // Concatenación HEX → 8 bits
-    //==============================
-    assign A_bin = {A_hi, A_lo};  
+    assign A_bin = {A_hi, A_lo};
     assign B_bin = {B_hi, B_lo};
-
     assign ready_operands = (estado == READY);
 
 endmodule
-
