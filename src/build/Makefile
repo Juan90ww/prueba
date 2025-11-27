@@ -13,7 +13,7 @@ SOURCES := $(wildcard ../design/*.v ../design/*.sv)
 CONSTRAINTS = ../constr/Modulo_Pines.cst
 
 # Nombre del módulo top (sin extensión)
-TOP_DESIGN = top
+TOP_DESIGN = top_divisor
 TOP_TB = tb_top_divisor_printf
 
 # Testbench por defecto (top-level)
