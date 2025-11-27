@@ -1,11 +1,11 @@
 module captura_operandos(
     input  logic       clk,
     input  logic       rst,
-    input  logic [3:0] tecla,        // valor hex debounced
-    input  logic       tecla_valida, // 1 ciclo durante LOAD
+    input  logic [3:0] tecla,
+    input  logic       tecla_valida,
 
-    output logic [6:0] A_bin,
-    output logic [6:0] B_bin,
+    output logic [7:0] A_bin,
+    output logic [7:0] B_bin,
     output logic       ready_operands
 );
 
@@ -32,7 +32,7 @@ module captura_operandos(
             A_LSB: if (tecla_valida) next = B_MSB;
             B_MSB: if (tecla_valida) next = B_LSB;
             B_LSB: if (tecla_valida) next = READY;
-            READY: next = READY;
+            READY: if (tecla_valida) next = A_MSB;  // <-- FIX
         endcase
     end
 
@@ -59,11 +59,12 @@ module captura_operandos(
     end
 
     //==============================
-    // Conversión HEX → BIN (7 bits)
+    // Concatenación HEX → 8 bits
     //==============================
-    assign A_bin = {A_hi, A_lo};   // 8 bits → usa solo 7 bits efectivos
+    assign A_bin = {A_hi, A_lo};  
     assign B_bin = {B_hi, B_lo};
 
     assign ready_operands = (estado == READY);
 
 endmodule
+
