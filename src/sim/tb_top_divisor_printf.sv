@@ -2,21 +2,15 @@
 
 module tb_top_divisor_printf;
 
-    // Señales del sistema
     logic clk = 0;
     logic rst = 0;
 
-    // Señales del teclado simulado
     logic [3:0] fil;
-    wire  [3:0] col;  
+    wire  [3:0] col;
 
-    // Señales del display (no se analizan)
     wire [3:0] anodo;
     wire [6:0] seven;
 
-    // ----------------------------------------------------------
-    //   Instancia del DUT (top_divisor)
-    // ----------------------------------------------------------
     top_divisor dut(
         .clk(clk),
         .rst(rst),
@@ -26,85 +20,106 @@ module tb_top_divisor_printf;
         .seven(seven)
     );
 
-    // ----------------------------------------------------------
-    // Clock  (50 MHz sim → 20 ns)
-    // ----------------------------------------------------------
+    // Clock 50 MHz
     always #10 clk = ~clk;
 
-    // ----------------------------------------------------------
-    // Procedimiento para simular una tecla presionada
-    // ----------------------------------------------------------
-    task press_key(input [3:0] code);
+    // ============================================================
+    // SIMULAR UNA TECLA:
+    //  Bajamos una fila, dependiendo de la columna activa
+    // ============================================================
+    task press_key(input [3:0] hex);
         begin
-            // El módulo "teclado" produce tecla_hex = code
-            // cuando detecta una fila baja.
-            fil = 4'b0111;  // fila simulada baja
-            force dut.tecla_hex = code;
-            #100_000;       // tiempo suficiente para debounce
-            fil = 4'b1111;  // liberar
-            #50_000;
+            // Esperar a que el módulo teclado seleccione una columna
+            repeat (4000) @(posedge clk);
+
+            // Forzamos filas en función del key requested
+            case(hex)
+                4'h1: fil = 4'b0111;
+                4'h2: fil = 4'b0111;
+                4'h3: fil = 4'b0111;
+
+                4'h4: fil = 4'b1011;
+                4'h5: fil = 4'b1011;
+                4'h6: fil = 4'b1011;
+
+                4'h7: fil = 4'b1101;
+                4'h8: fil = 4'b1101;
+                4'h9: fil = 4'b1101;
+
+                4'h0: fil = 4'b1110;
+
+                4'hA: fil = 4'b1110;
+                4'hB: fil = 4'b1110;
+                4'hC: fil = 4'b1110;
+                4'hD: fil = 4'b1110;
+
+                default: fil = 4'b1111;
+            endcase
+
+            // Tiempo de presión
+            repeat (5000) @(posedge clk);
+
+            // Liberar tecla
+            fil = 4'b1111;
+            repeat (5000) @(posedge clk);
         end
     endtask
 
-    // ----------------------------------------------------------
-    // Enviar un byte hex como dos teclas
-    // Ej: send_hex(8'h4F) → tecla '4', tecla 'F'
-    // ----------------------------------------------------------
     task send_hex(input [7:0] val);
         begin
-            press_key(val[7:4]);
-            press_key(val[3:0]);
+            press_key(val[7:4]); // MSB
+            press_key(val[3:0]); // LSB
         end
     endtask
 
-
-    // ----------------------------------------------------------
-    // Monitoreo de resultados
-    // ----------------------------------------------------------
+    // ============================================================
+    // TEST
+    // ============================================================
     initial begin
         $dumpfile("tb_top_divisor_printf.vcd");
         $dumpvars(0, tb_top_divisor_printf);
 
-        // Inicio
-        rst = 0; fil = 4'b1111;
+        fil = 4'b1111;
+
         #100;
         rst = 1;
+        #1000;
 
-        // ======================================================
-        //   PRUEBA 1: A = 45h = 69, B = 07h = 7
-        // ======================================================
-        $display("=== TEST 1 ===");
-        send_hex(8'h45);  // A = 0x45
-        send_hex(8'h07);  // B = 0x07
+        // ===========================
+        //  TEST 1:  A = 0x45 , B = 0x07
+        // ===========================
+        $display("\n=== TEST 1: A=0x45, B=0x07 ===");
+
+        send_hex(8'h45); // A
+        send_hex(8'h07); // B
 
         wait (dut.div_done == 1);
 
-        $display("A = %0d  B = %0d  Q = %0d  R = %0d",
-                  dut.A_bin, dut.B_bin,
-                  dut.Cociente, dut.Residuo);
+        $display("A=%0d  B=%0d  Q=%0d  R=%0d",
+            dut.A_bin, dut.B_bin,
+            dut.Cociente, dut.Residuo);
 
-        #1000;
+        #10000;
 
-        // ======================================================
-        //   PRUEBA 2: A = 7Eh = 126, B = 09h = 9
-        // ======================================================
-        $display("=== TEST 2 ===");
-        send_hex(8'h7E);  // A = 126
-        send_hex(8'h09);  // B = 9
+        // ===========================
+        //  TEST 2:  A = 0x7E , B = 0x09
+        // ===========================
+        $display("\n=== TEST 2: A=0x7E, B=0x09 ===");
+
+        send_hex(8'h7E); // A
+        send_hex(8'h09); // B
 
         wait (dut.div_done == 1);
 
-        $display("A = %0d  B = %0d  Q = %0d  R = %0d",
-                  dut.A_bin, dut.B_bin,
-                  dut.Cociente, dut.Residuo);
+        $display("A=%0d  B=%0d  Q=%0d  R=%0d",
+            dut.A_bin, dut.B_bin,
+            dut.Cociente, dut.Residuo);
 
-        #1000;
+        #50000;
 
-        // ------------------------------------------------------
-        // Terminar simulación
-        // ------------------------------------------------------
-        $display("FIN SIMULACIÓN TOP DIVISOR PRINTF");
+        $display("\nFIN SIMULACIÓN TOP DIVISOR");
         $finish;
     end
 
 endmodule
+
