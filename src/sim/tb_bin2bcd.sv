@@ -1,4 +1,5 @@
 `timescale 1ns/1ps
+
 module tb_bin2bcd;
 
     logic clk = 0;
@@ -39,7 +40,7 @@ module tb_bin2bcd;
     task test_bcd(input int x);
         begin
             @(posedge clk);
-            bin = x;
+            bin = x[6:0];
             start = 1;
             @(posedge clk) start = 0;
 
@@ -50,3 +51,4 @@ module tb_bin2bcd;
     endtask
 
 endmodule
+
