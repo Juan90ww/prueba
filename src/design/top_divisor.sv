@@ -16,10 +16,10 @@ module top_divisor(
     //-----------------------------------------
     logic [3:0] filas_db;
 
-    debounce d0(.clk(clk), .rst(rst), .key(fil[0]), .key_pressed(filas_db[0]));
-    debounce d1(.clk(clk), .rst(rst), .key(fil[1]), .key_pressed(filas_db[1]));
-    debounce d2(.clk(clk), .rst(rst), .key(fil[2]), .key_pressed(filas_db[2]));
-    debounce d3(.clk(clk), .rst(rst), .key(fil[3]), .key_pressed(filas_db[3]));
+    debounce db0(.clk(clk), .rst(rst), .key(fil[0]), .key_pressed(filas_db[0]));
+    debounce db1(.clk(clk), .rst(rst), .key(fil[1]), .key_pressed(filas_db[1]));
+    debounce db2(.clk(clk), .rst(rst), .key(fil[2]), .key_pressed(filas_db[2]));
+    debounce db3(.clk(clk), .rst(rst), .key(fil[3]), .key_pressed(filas_db[3]));
 
     //-----------------------------------------
     // 2) Keypad scanning → tecla en HEX
@@ -72,7 +72,7 @@ module top_divisor(
     //-----------------------------------------
     // 4) Captura operandos (A y B en HEX)
     //-----------------------------------------
-    logic [7:0] A_bin, B_bin;   // 8 bits, coincide con captura_operandos
+    logic [7:0] A_bin, B_bin; 
     logic operands_ready;
     logic operands_ready_d;
     logic start_div;
@@ -87,56 +87,56 @@ module top_divisor(
         .ready_operands(operands_ready)
     );
 
-    // Generar pulso start_div cuando ready_operands sube
+    // Pulso start_div
     always_ff @(posedge clk or negedge rst) begin
         if (!rst) begin
             operands_ready_d <= 0;
             start_div <= 0;
         end else begin
             operands_ready_d <= operands_ready;
-            start_div <= operands_ready & ~operands_ready_d;  // detección de flanco
+            start_div <= operands_ready & ~operands_ready_d;
         end
     end
 
     //-----------------------------------------
-    // 5) Divisor RESTORING
+    // 5) Divisor RESTORING (nombre corregido)
     //-----------------------------------------
     logic [6:0] Cociente, Residuo;
     logic div_done;
 
-    divisor_restoring divi(
+    divisor_restoring_7bits divi(
         .clk(clk),
         .rst(rst),
         .start(start_div),
-        .A_in(A_bin[6:0]),   // Se toma solo 7 bits
-        .B_in(B_bin[6:0]),
-        .Q(Cociente),
-        .R(Residuo),
+        .dividendo(A_bin[6:0]),
+        .divisor(B_bin[6:0]),
+        .cociente(Cociente),
+        .resto(Residuo),
         .done(div_done)
     );
 
     //-----------------------------------------
-    // 6) Convertir binario → BCD (para display)
+    // 6) Convertir binario → BCD
     //-----------------------------------------
-    logic [3:0] d3, d2, d1, d0;
+    logic [3:0] bcd3, bcd2, bcd1, bcd0;
     logic bcd_done;
 
     bin2bcd #(.N(7)) conv(
         .clk(clk),
         .rst(rst),
         .start(div_done),
-        .bin(Cociente),       // Se muestra el cociente
-        .bcd3(d3),
-        .bcd2(d2),
-        .bcd1(d1),
-        .bcd0(d0),
+        .bin(Cociente),
+        .bcd3(bcd3),
+        .bcd2(bcd2),
+        .bcd1(bcd1),
+        .bcd0(bcd0),
         .done(bcd_done)
     );
 
     //-----------------------------------------
-    // 7) Multiplexor del display 7 segmentos
+    // 7) Display multiplexado
     //-----------------------------------------
-    logic [15:0] digito = {d3, d2, d1, d0};
+    logic [15:0] digito = {bcd3, bcd2, bcd1, bcd0};
 
     display_7seg mux(
         .clk(clk),
