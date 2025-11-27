@@ -11,7 +11,7 @@ module tb_top_divisor_printf;
     wire [3:0] anodo;
     wire [6:0] seven;
 
-    top_divisor dut(
+    top_divisor_debug dut(
         .clk(clk),
         .rst(rst),
         .fil(fil),
