@@ -59,6 +59,8 @@ module top_divisor(
     //-----------------------------------------
     logic [6:0] A_bin, B_bin;
     logic operands_ready;
+    logic operands_ready_d;
+    logic start_div;
 
     captura_operandos capt(
         .clk(clk), .rst(rst),
@@ -69,6 +71,16 @@ module top_divisor(
         .ready_operands(operands_ready)
     );
 
+    always_ff @(posedge clk or negedge rst) begin
+        if (!rst) begin
+            operands_ready_d <= 0;
+            start_div <= 0; 
+       end else begin
+           operands_ready_d <= operands_ready;
+           start_div <= operands_ready & ~operands_ready_d;  
+       end
+    end
+
     //-----------------------------------------
     // 5) Divisor
     //-----------------------------------------
@@ -77,7 +89,7 @@ module top_divisor(
 
     divisor_restoring divi(
         .clk(clk), .rst(rst),
-        .start(operands_ready),
+        .start(start_div),
         .A_in(A_bin), .B_in(B_bin),
         .Q(Cociente), .R(Residuo),
         .done(div_done)
