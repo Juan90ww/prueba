@@ -1,5 +1,5 @@
 module bin2bcd #(
-    parameter N = 8   // bits de entrada
+    parameter N = 8
 )(
     input  logic        clk,
     input  logic        rst,
@@ -21,7 +21,6 @@ module bin2bcd #(
     typedef enum logic [1:0] {IDLE, LOAD, RUN, FINISH} state_t;
     state_t estado, next;
 
-    // FSM NEXT
     always_comb begin
         next = estado;
         case (estado)
@@ -32,7 +31,6 @@ module bin2bcd #(
         endcase
     end
 
-    // FSM + operations
     integer i;
     always_ff @(posedge clk or negedge rst) begin
         if (!rst) begin
@@ -42,7 +40,6 @@ module bin2bcd #(
             count <= 0;
         end else begin
             estado <= next;
-
             case (estado)
                 IDLE: done <= 0;
 
