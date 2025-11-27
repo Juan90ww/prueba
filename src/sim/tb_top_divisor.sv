@@ -4,86 +4,64 @@ module tb_top_divisor;
 
     logic clk = 0;
     logic rst = 0;
+    logic start;
 
-    // Señales del DUT que realmente importan
-    logic start_div;
-    logic [7:0] A_bin, B_bin;
+    logic [6:0] A_in, B_in;
+    logic [6:0] Q, R;
+    logic done;
 
-    wire [6:0] Q;
-    wire [6:0] R;
-    wire div_done;
+    // reloj 10ns
+    always #5 clk = ~clk;
 
-    //-----------------------------------------
-    // 1) Generar reloj
-    //-----------------------------------------
-    always #10 clk = ~clk;   // 50 MHz
-
-    //-----------------------------------------
-    // 2) Instanciar SOLO el divisor
-    //-----------------------------------------
-    divisor_restoring_7bits dut (
+    // DUT: divisor_restoring
+    divisor_restoring_7bits uut (
         .clk(clk),
         .rst(rst),
-        .start(start_div),
-        .A_in(A_bin[6:0]),
-        .B_in(B_bin[6:0]),
+        .start(start),
+        .A_in(A_in),
+        .B_in(B_in),
         .Q(Q),
         .R(R),
-        .done(div_done)
+        .done(done)
     );
 
-    //-----------------------------------------
-    // 3) Tarea para probar una división
-    //-----------------------------------------
-    task test_div(
-        input int A,
-        input int B
-    );
-    begin
-        A_bin = A;
-        B_bin = B;
-
-        $display("\n### Probando A = %0d   B = %0d ###", A, B);
-
-        // Pulso de start
-        start_div = 1;
-        @(posedge clk);
-        start_div = 0;
-
-        // Esperar resultado
-        wait(div_done == 1);
-
-        $display("  Q = %0d   R = %0d", Q, R);
-    end
-    endtask
-
-    //-----------------------------------------
-    // 4) Secuencia principal
-    //-----------------------------------------
+    // Test automático
     initial begin
         $dumpfile("tb_top_divisor.vcd");
-        $dumpvars(0, tb_top_divisor_auto);
+        $dumpvars(0, tb_top_divisor);
 
         rst = 0;
-        start_div = 0;
-        A_bin = 0;
-        B_bin = 0;
-
-        repeat (5) @(posedge clk);
+        start = 0;
+        #20;
         rst = 1;
 
-        // --- PRUEBAS AUTOMÁTICAS ---
-        test_div(127, 7);
-        test_div(85, 5);
-        test_div(64, 8);
-        test_div(123, 9);
-        test_div(100, 13);
-        test_div(99, 10);
+        // Probar varios valores
+        test_case(  7,  2 );
+        test_case( 50,  7 );
+        test_case(127, 13 );
+        test_case( 99,  5 );
 
-        $display("\n=== TODAS LAS PRUEBAS TERMINADAS ===\n");
+        $display("FIN DE LA SIMULACION");
         $finish;
     end
 
+    task test_case(input int A, input int B);
+        begin
+            @(posedge clk);
+            A_in = A;
+            B_in = B;
+            start = 1;
+            @(posedge clk);
+            start = 0;
+
+            wait(done);
+
+            $display("A=%0d  B=%0d  => Q=%0d  R=%0d", 
+                      A_in, B_in, Q, R);
+        end
+    endtask
+
 endmodule
+
 
 
