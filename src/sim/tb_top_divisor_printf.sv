@@ -87,12 +87,16 @@ module tb_top_divisor_printf;
         send_hex(8'h45);
         send_hex(8'h07);
 
-        wait (dut.div_done == 1);
+        wait (dut.div_done_debug == 1);
 
         $display("A=%0d  B=%0d  Q=%0d  R=%0d",
-            dut.A_bin, dut.B_bin,
-            dut.Cociente, dut.Residuo);
-
+                 dut.A_bin_debug,
+                 
+                 dut.B_bin_debug,
+                  
+                 dut.Q_debug,
+                 dut.R_debug);
+            
         #10000;
         $display("\nFIN SIMULACIÓN");
         $finish;
