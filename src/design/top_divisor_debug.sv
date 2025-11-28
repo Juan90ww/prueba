@@ -75,27 +75,28 @@ module top_divisor_debug (
     assign A8 = A_bin_debug;
     assign B8 = B_bin_debug;
 
-    always_ff @(posedge clk or negedge rst) begin
+    always_ff @(posedge clk or negedge rst) begin 
         if (!rst) begin
-            Q_debug <= 0;
-            R_debug <= 0;
-            div_done_debug <= 0;
+             Q_debug <= 0;
+             R_debug <= 0;
+             div_done_debug <= 0;
         end else begin
-            div_done_debug <= 0;
-            if (start_div) begin
+
+            if  if (start_div) begin
                 if (B8 == 0) begin
-                    Q_debug <= 0;
-                    R_debug <= A8[6:0];
-                    div_done_debug <= 1;
-                end else begin
-                    Q_debug <= A8 / B8;
-                    R_debug <= A8 % B8;
-                    div_done_debug <= 1;
-                end
+                     Q_debug <= 0;
+                     R_debug <= A8[6:0];
+                 end else begin
+                      Q_debug <= A8 / B8;
+                      R_debug <= A8 % B8;
+                 end
+
+                div_done_debug <= 1;
             end
         end
     end
-
+            
+    
     // =====================================================
     // 4) BIN → BCD (solo el cociente)
     // =====================================================
