@@ -17,7 +17,6 @@ module tb_top_divisor_debug;
     wire [6:0] R_debug;
     wire       done_debug;
 
-    // Instanciamos el TOP correcto
     top_divisor_debug dut(
         .clk(clk),
         .rst(rst),
@@ -32,23 +31,20 @@ module tb_top_divisor_debug;
         .div_done_debug(done_debug)
     );
 
-    always #10 clk = ~clk; // 50MHz
+    always #10 clk = ~clk;
 
-    // --- ENVÍO DE NIBBLES ---
-
+    // ---- FIX: pulsos más largos ----
     task send_nibble(input [3:0] val);
         begin
-            fil = val;
-            @(posedge clk); @(posedge clk);
-            fil = 4'hF;
-            repeat(3) @(posedge clk);
+            repeat(20) begin @(posedge clk); fil = val; end
+            repeat(20) begin @(posedge clk); fil = 4'hF; end
         end
     endtask
 
-    task send_hex(input [7:0] val);
+    task send_hex(input [7:0] v);
         begin
-            send_nibble(val[7:4]);
-            send_nibble(val[3:0]);
+            send_nibble(v[7:4]);
+            send_nibble(v[3:0]);
         end
     endtask
 
@@ -57,7 +53,7 @@ module tb_top_divisor_debug;
         $dumpvars(0, tb_top_divisor_debug);
 
         rst = 0;
-        #50;
+        repeat(5) @(posedge clk);
         rst = 1;
 
         $display("\n=== TEST: A=0x45, B=0x07 ===");
@@ -65,13 +61,14 @@ module tb_top_divisor_debug;
         send_hex(8'h45);
         send_hex(8'h07);
 
-        wait(done_debug == 1);
+        @(posedge done_debug);
 
         $display("A=%0d  B=%0d  Q=%0d  R=%0d",
             A_debug, B_debug, Q_debug, R_debug
         );
 
-        #100;
+        repeat(20) @(posedge clk);
+
         $display("\nFIN SIMULACIÓN");
         $finish;
     end
