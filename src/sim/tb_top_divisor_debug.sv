@@ -17,6 +17,7 @@ module tb_top_divisor_debug;
     wire [6:0] R_debug;
     wire       done_debug;
 
+    // Instancia del TOP
     top_divisor_debug dut(
         .clk(clk),
         .rst(rst),
@@ -31,20 +32,23 @@ module tb_top_divisor_debug;
         .div_done_debug(done_debug)
     );
 
-    always #10 clk = ~clk;
+    always #10 clk = ~clk;  // 50 MHz
 
-    // ---- FIX: pulsos más largos ----
+    // --- ENVÍO DE NIBBLES ---
     task send_nibble(input [3:0] val);
         begin
-            repeat(20) begin @(posedge clk); fil = val; end
-            repeat(20) begin @(posedge clk); fil = 4'hF; end
+            fil = val;
+            @(posedge clk);
+            @(posedge clk);
+            fil = 4'hF;
+            repeat(3) @(posedge clk);
         end
     endtask
 
-    task send_hex(input [7:0] v);
+    task send_hex(input [7:0] val);
         begin
-            send_nibble(v[7:4]);
-            send_nibble(v[3:0]);
+            send_nibble(val[7:4]);
+            send_nibble(val[3:0]);
         end
     endtask
 
@@ -53,24 +57,32 @@ module tb_top_divisor_debug;
         $dumpvars(0, tb_top_divisor_debug);
 
         rst = 0;
-        repeat(5) @(posedge clk);
+        repeat(8) @(posedge clk);
         rst = 1;
+        repeat(8) @(posedge clk);
 
         $display("\n=== TEST: A=0x45, B=0x07 ===");
 
         send_hex(8'h45);
         send_hex(8'h07);
 
-        @(posedge done_debug);
+        fork
+            begin
+                @(posedge done_debug);
+                $display("A=%0d  B=%0d  Q=%0d  R=%0d",
+                    A_debug, B_debug, Q_debug, R_debug);
+            end
+            begin
+                #2000000;
+                $fatal("ERROR: Timeout esperando done_debug");
+            end
+        join_any
+        disable fork;
 
-        $display("A=%0d  B=%0d  Q=%0d  R=%0d",
-            A_debug, B_debug, Q_debug, R_debug
-        );
-
-        repeat(20) @(posedge clk);
-
-        $display("\nFIN SIMULACIÓN");
+        repeat(50) @(posedge clk);
+        $display("FIN SIMULACIÓN");
         $finish;
     end
 
 endmodule
+
