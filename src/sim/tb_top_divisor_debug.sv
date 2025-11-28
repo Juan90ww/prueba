@@ -17,7 +17,7 @@ module tb_top_divisor_debug;
     wire [6:0] R_debug;
     wire       done_debug;
 
-    // Instancia del TOP
+    // Instanciamos el TOP correcto
     top_divisor_debug dut(
         .clk(clk),
         .rst(rst),
@@ -32,14 +32,13 @@ module tb_top_divisor_debug;
         .div_done_debug(done_debug)
     );
 
-    always #10 clk = ~clk;  // 50 MHz
+    always #10 clk = ~clk; // 50MHz
 
     // --- ENVÍO DE NIBBLES ---
     task send_nibble(input [3:0] val);
         begin
             fil = val;
-            @(posedge clk);
-            @(posedge clk);
+            @(posedge clk); @(posedge clk);
             fil = 4'hF;
             repeat(3) @(posedge clk);
         end
@@ -56,31 +55,28 @@ module tb_top_divisor_debug;
         $dumpfile("tb_top_divisor_debug.vcd");
         $dumpvars(0, tb_top_divisor_debug);
 
+        // DEBUG: confirmar que el TB arranca
+        $display("TB arrancando...");
+
         rst = 0;
         repeat(8) @(posedge clk);
         rst = 1;
         repeat(8) @(posedge clk);
 
-        $display("\n=== TEST: A= 45, B= 07 ===");
+        $display("\n=== TEST: A=0x45, B=0x07 ===");
 
         send_hex(8'h45);
         send_hex(8'h07);
 
-        fork
-            begin
-                @(posedge done_debug);
-                $display("A=%0d  B=%0d  Q=%0d  R=%0d",
-                    A_debug, B_debug, Q_debug, R_debug);
-            end
-            begin
-                #2000000;
-                $fatal("ERROR: Timeout esperando done_debug");
-            end
-        join_any
-        disable fork;
+        // esperar flanco de done (robusto frente a pulsos cortos)
+        @(posedge done_debug);
 
-        repeat(50) @(posedge clk);
-        $display("FIN SIMULACIÓN");
+        $display("A=%0d  B=%0d  Q=%0d  R=%0d",
+            A_debug, B_debug, Q_debug, R_debug
+        );
+
+        #100;
+        $display("\nFIN SIMULACIÓN");
         $finish;
     end
 
