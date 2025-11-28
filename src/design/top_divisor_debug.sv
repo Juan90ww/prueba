@@ -1,16 +1,9 @@
-// ===============================================
-//  TOP DIVISOR DEBUG — PARA SIMULACIÓN
-//  Compatible con tb_top_divisor_printf
-//  SIN teclado, SIN debounce, SIN FSM,
-//  CON bypass directo de la tecla
-// ===============================================
-
 module top_divisor_debug (
     input  logic clk,
     input  logic rst,
 
-    input  logic [3:0] fil,     // entrada del testbench
-    output logic [3:0] col,     // ya no usado, pero debe existir
+    input  logic [3:0] fil,    
+    output logic [3:0] col,     
     output logic [3:0] anodo,
     output logic [6:0] seven,
 
@@ -22,24 +15,9 @@ module top_divisor_debug (
     output logic       div_done_debug
 );
 
-    // =====================================================
-    // 1) BYPASS DIRECTO DE TECLA
-    // =====================================================
-    //
-    // Interpretamos fil como un valor HEX directo:
-    // fil = 0000 → tecla 0
-    // fil = 0001 → tecla 1
-    // ...
-    // fil = 1111 → no presionado
-    //
-    // (tb_top_divisor_printf ya envía valores en ese formato)
-
     logic [3:0] tecla_hex;
     assign tecla_hex = fil;
 
-    // =====================================================
-    // 2) CAPTURA DE 2 BYTES A Y B (MSB y LSB)
-    // =====================================================
 
     typedef enum logic [2:0] { A_H, A_L, B_H, B_L, READY } st_t;
     st_t estado;
@@ -50,7 +28,6 @@ module top_divisor_debug (
     logic tecla_valida;
     logic [3:0] last_hex;
 
-    // pulso de tecla válida (cambio)
     always_ff @(posedge clk or negedge rst) begin
         if (!rst) begin
             last_hex <= 4'hF;
@@ -61,7 +38,6 @@ module top_divisor_debug (
         end
     end
 
-    // FSM simple
     always_ff @(posedge clk or negedge rst) begin
         if (!rst) begin
             estado <= A_H;
