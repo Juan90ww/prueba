@@ -61,10 +61,10 @@ module tb_top_divisor_debug;
         rst = 1;
         repeat(8) @(posedge clk);
 
-        $display("\n=== TEST: A=0x45, B=0x07 ===");
+        $display("\n=== TEST: A= 45, B= 07 ===");
 
-        send_hex(8'h45);
-        send_hex(8'h07);
+        send_hex(8'h1);
+        send_hex(8'h1);
 
         fork
             begin
