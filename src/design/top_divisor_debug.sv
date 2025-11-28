@@ -1,4 +1,5 @@
-
+// src/design/top_divisor_debug.sv
+// Módulo de diseño (versión completa y consistente)
 
 module top_divisor_debug (
     input  logic clk,
