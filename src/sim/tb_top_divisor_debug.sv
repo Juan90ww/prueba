@@ -36,18 +36,20 @@ module tb_top_divisor_debug;
     always #10 clk = ~clk; // 50MHz
 
     // --- ENVÍO DE NIBBLES ---
-    task send_nibble(input [3:0] val);
-        begin
-            @(posedge clk);     // sincronizar
-            fil = val;
+   task send_nibble(input [3:0] val);
+       begin
+           fil = 4'hF;        // garantizar cambio previo
+           @(posedge clk);
 
-            @(posedge clk);     // mantenerlo un ciclo completo
-            fil = 4'hF;
+           fil = val;         // enviar nibble
+           @(posedge clk);    // mantener un ciclo
 
-            // tiempo extra para que la FSM avance
-            @(posedge clk);
-            @(posedge clk);
-        end
+           fil = 4'hF;        // regreso a idle
+           @(posedge clk);
+
+           @(posedge clk);    // tiempo extra para FSM
+    
+       end
     endtask
 
     task send_hex(input [7:0] val);
