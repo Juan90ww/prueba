@@ -60,31 +60,19 @@ module tb_top_divisor_debug;
     initial begin
         $dumpfile("tb_top_divisor_debug.vcd");
         $dumpvars(0, tb_top_divisor_debug);
-
-        // DEBUG: confirmar que el TB arranca
-        $display("TB arrancando...");
-
         rst = 0;
-        repeat(8) @(posedge clk);
+        repeat(5) @(posedge clk);
         rst = 1;
-        repeat(8) @(posedge clk);
-
+        repeat(5) @(posedge clk);
         $display("\n=== TEST: A=0x45, B=0x07 ===");
-
         send_hex(8'h45);
         send_hex(8'h07);
-
-        // esperar flanco de done (robusto frente a pulsos cortos)
         @(posedge done_debug);
-
         $display("A=%0d  B=%0d  Q=%0d  R=%0d",
-            A_debug, B_debug, Q_debug, R_debug
+                 A_debug, B_debug, Q_debug, R_debug
         );
-
-        #100;
+        #50;
         $display("\nFIN SIMULACIÓN");
         $finish;
-    end
-
-endmodule
+end
 
