@@ -1,16 +1,22 @@
-// src/design/top_divisor_debug.sv
-// Módulo de diseño (versión completa y consistente)
+// ============================================================
+//  TOP DIVISOR DEBUG — versión corregida
+//  * Captura de nibbles robusta
+//  * Detector de tecla arreglado
+//  * División combinacional estable
+//  * DONE latched correctamente
+// ============================================================
 
 module top_divisor_debug (
     input  logic clk,
     input  logic rst,
 
     input  logic [3:0] fil,     // entrada del testbench
-    output logic [3:0] col,     // no usado, pero requerido
+    output logic [3:0] col,     // no usado, pero requerido por top
+
     output logic [3:0] anodo,
     output logic [6:0] seven,
 
-    // Señales de debug expuestas al testbench
+    // Señales de debug para el testbench
     output logic [7:0] A_bin_debug,
     output logic [7:0] B_bin_debug,
     output logic [6:0] Q_debug,
@@ -19,13 +25,13 @@ module top_divisor_debug (
 );
 
     // =====================================================
-    // 1) BYPASS DEL TECLADO
+    // 1) BYPASS DEL TECLADO (simplemente usar FIL)
     // =====================================================
     logic [3:0] tecla_hex;
     assign tecla_hex = fil;
 
     // =====================================================
-    // 2) CAPTURA DE 2 BYTES PARA A y B
+    // 2) CAPTURA DE 2 BYTES (A y B) con FSM
     // =====================================================
     typedef enum logic [2:0] { A_H, A_L, B_H, B_L, READY } st_t;
     st_t estado;
@@ -36,18 +42,25 @@ module top_divisor_debug (
     logic tecla_valida;
     logic [3:0] last_hex;
 
-    // detectar cambios (como valid)
+    // --- Detector de tecla válida (CORREGIDO) ---
+    //
+    // El error original: last_hex iniciaba en 0xF
+    // pero fil también inicia en 0xF → nunca había cambio.
+    // Esto dejaba la FSM congelada.
+    //
+    // Solución: inicializar last_hex en un valor distinto.
+    //
     always_ff @(posedge clk or negedge rst) begin
         if (!rst) begin
-            last_hex     <= 4'hF;
-            tecla_valida <= 0;
+            last_hex     <= 4'hE;       // *** FIX CLAVE ***
+            tecla_valida <= 1'b0;
         end else begin
             tecla_valida <= (tecla_hex != last_hex);
             last_hex     <= tecla_hex;
         end
     end
 
-    // FSM simple
+    // --- FSM que captura A y B ---
     always_ff @(posedge clk or negedge rst) begin
         if (!rst) begin
             estado <= A_H;
@@ -56,10 +69,10 @@ module top_divisor_debug (
         end else begin
             if (tecla_valida) begin
                 case (estado)
-                    A_H: begin A_hi <= tecla_hex; estado <= A_L; end
-                    A_L: begin A_lo <= tecla_hex; estado <= B_H; end
-                    B_H: begin B_hi <= tecla_hex; estado <= B_L; end
-                    B_L: begin B_lo <= tecla_hex; estado <= READY; end
+                    A_H:   begin A_hi <= tecla_hex; estado <= A_L; end
+                    A_L:   begin A_lo <= tecla_hex; estado <= B_H; end
+                    B_H:   begin B_hi <= tecla_hex; estado <= B_L; end
+                    B_L:   begin B_lo <= tecla_hex; estado <= READY; end
                     READY: estado <= A_H;
                 endcase
             end
@@ -69,8 +82,11 @@ module top_divisor_debug (
     assign A_bin_debug = {A_hi, A_lo};
     assign B_bin_debug = {B_hi, B_lo};
 
-    // pulso de inicio de división
+    // =====================================================
+    // 3) GENERACIÓN DE start_div (pulso limpio)
+    // =====================================================
     logic start_div;
+
     always_ff @(posedge clk or negedge rst) begin
         if (!rst)
             start_div <= 0;
@@ -79,9 +95,8 @@ module top_divisor_debug (
     end
 
     // =====================================================
-    // 3) DIVISIÓN (CON DONE LATCHED)
+    // 4) DIVISIÓN (combinacional, con DONE latched)
     // =====================================================
-
     logic [7:0] A8, B8;
     assign A8 = A_bin_debug;
     assign B8 = B_bin_debug;
@@ -92,11 +107,9 @@ module top_divisor_debug (
             R_debug <= 0;
             div_done_debug <= 0;
         end else begin
-            // limpiar DONE solo cuando inicia una nueva división
             if (start_div)
-                div_done_debug <= 0;
+                div_done_debug <= 0;   // limpiar previo
 
-            // ejecutar división
             if (start_div) begin
                 if (B8 == 0) begin
                     Q_debug <= 0;
@@ -106,14 +119,13 @@ module top_divisor_debug (
                     R_debug <= A8 % B8;
                 end
 
-                // DONE permanece en 1 hasta la próxima división
-                div_done_debug <= 1;
+                div_done_debug <= 1;  // DONE queda en 1
             end
         end
     end
 
     // =====================================================
-    // 4) CONVERSIÓN BIN→BCD (solo cociente)
+    // 5) CONVERSIÓN BIN→BCD (cociente)
     // =====================================================
     logic [3:0] b3, b2, b1, b0;
     logic bcd_done;
@@ -129,7 +141,7 @@ module top_divisor_debug (
     );
 
     // =====================================================
-    // 5) DISPLAY
+    // 6) DISPLAY
     // =====================================================
     logic [15:0] digito;
     assign digito = {b3, b2, b1, b0};
@@ -142,7 +154,7 @@ module top_divisor_debug (
         .seven(seven)
     );
 
-    // columnas no usadas
     assign col = 4'b0000;
 
 endmodule
+
