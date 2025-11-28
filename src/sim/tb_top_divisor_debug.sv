@@ -32,18 +32,19 @@ module tb_top_divisor_debug;
         .div_done_debug(done_debug)
     );
 
+    // Clock
     always #10 clk = ~clk; // 50MHz
 
     // --- ENVÍO DE NIBBLES ---
     task send_nibble(input [3:0] val);
         begin
-            @(posedge clk);    // sincronizado
+            @(posedge clk);     // sincronizar
             fil = val;
-            @(posedge clk);    // mantenerlo 1 ciclo completo
-            fil = 4'hF;
-            @(posedge clk);    // volver a idle
 
-        // tiempo extra para que la FSM procese
+            @(posedge clk);     // mantenerlo un ciclo completo
+            fil = 4'hF;
+
+            // tiempo extra para que la FSM avance
             @(posedge clk);
             @(posedge clk);
         end
@@ -56,23 +57,28 @@ module tb_top_divisor_debug;
         end
     endtask
 
-
     initial begin
         $dumpfile("tb_top_divisor_debug.vcd");
         $dumpvars(0, tb_top_divisor_debug);
+
         rst = 0;
         repeat(5) @(posedge clk);
         rst = 1;
         repeat(5) @(posedge clk);
+
         $display("\n=== TEST: A=0x45, B=0x07 ===");
+
         send_hex(8'h45);
         send_hex(8'h07);
+
         @(posedge done_debug);
+
         $display("A=%0d  B=%0d  Q=%0d  R=%0d",
-                 A_debug, B_debug, Q_debug, R_debug
-        );
+                 A_debug, B_debug, Q_debug, R_debug);
+
         #50;
         $display("\nFIN SIMULACIÓN");
         $finish;
-end
+    end
 
+endmodule
