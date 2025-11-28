@@ -63,8 +63,8 @@ module tb_top_divisor_debug;
 
         $display("\n=== TEST: A= 45, B= 07 ===");
 
-        send_hex(8'h1);
-        send_hex(8'h1);
+        send_hex(8'h45);
+        send_hex(8'h07);
 
         fork
             begin
