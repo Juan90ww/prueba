@@ -15,13 +15,13 @@ CONSTRAINTS = ../constr/Modulo_Pines.cst
 # Nombre del módulo top (sin extensión)
 TOP_DESIGN = top_divisor_debug
 
-TOP_TB = tb_top_divisor_printf
+TOP_TB = tb_top_divisor_debug
 
 # Testbench por defecto (top-level)
 TESTBENCH = ../sim/$(TOP_TB).sv
 
 # Archivo de ondas VCD
-VCD_FILE = tb_top_divisor_printf.vcd
+VCD_FILE = tb_top_divisor_debug.vcd
 
 # Simulación del top por defecto
 test: $(SOURCES) $(TESTBENCH)
