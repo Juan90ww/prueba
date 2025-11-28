@@ -49,6 +49,13 @@ module tb_top_divisor_debug;
         end
     endtask
 
+    task send_hex(input [7:0] val);
+        begin
+            send_nibble(val[7:4]);   // nibble alto
+            send_nibble(val[3:0]);   // nibble bajo
+        end
+    endtask
+
 
     initial begin
         $dumpfile("tb_top_divisor_debug.vcd");
