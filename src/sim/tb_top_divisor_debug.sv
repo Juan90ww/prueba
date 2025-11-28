@@ -37,19 +37,18 @@ module tb_top_divisor_debug;
     // --- ENVÍO DE NIBBLES ---
     task send_nibble(input [3:0] val);
         begin
+            @(posedge clk);    // sincronizado
             fil = val;
-            @(posedge clk); @(posedge clk);
+            @(posedge clk);    // mantenerlo 1 ciclo completo
             fil = 4'hF;
-            repeat(3) @(posedge clk);
+            @(posedge clk);    // volver a idle
+
+        // tiempo extra para que la FSM procese
+            @(posedge clk);
+            @(posedge clk);
         end
     endtask
 
-    task send_hex(input [7:0] val);
-        begin
-            send_nibble(val[7:4]);
-            send_nibble(val[3:0]);
-        end
-    endtask
 
     initial begin
         $dumpfile("tb_top_divisor_debug.vcd");
