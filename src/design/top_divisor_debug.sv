@@ -67,7 +67,7 @@ module top_divisor_debug (
             A_hi <= 0; A_lo <= 0;
             B_hi <= 0; B_lo <= 0;
         end else begin
-            if (tecla_valida) begin
+            if (tecla_valida  && tecla_hex != 4'hF) begin
                 case (estado)
                     A_H:   begin A_hi <= tecla_hex; estado <= A_L; end
                     A_L:   begin A_lo <= tecla_hex; estado <= B_H; end
@@ -91,7 +91,7 @@ module top_divisor_debug (
         if (!rst)
             start_div <= 0;
         else
-            start_div <= (estado == B_L) && tecla_valida;
+            start_div <= (estado == B_L) && tecla_valida && tecla_hex != 4'hF;
     end
 
     // =====================================================
