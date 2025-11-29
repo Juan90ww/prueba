@@ -1,0 +1,109 @@
+module operacion #(
+    parameter int SCAN_DIV = 500
+)(
+    input  logic clk,
+    input  logic rst,
+    input  logic start,
+    input  logic [3:0] dividendo,
+    input  logic [3:0] divisor,
+
+    output logic [3:0] cociente,
+    output logic [3:0] resto,
+    output logic done
+);
+
+    typedef enum logic [2:0] {IDLE, LOAD, SHIFT, TRIAL, UPDATE, FIN} state_t;
+    state_t estado, next;
+
+    logic [3:0] A;         // Q registers
+    logic [4:0] R;         // R has 1 extra bit for sign
+    logic [3:0] M;         // divisor
+    logic [1:0] i;         // iteration counter (0..3)
+    logic [4:0] trial;     // R - M
+
+    //=====================================================
+    // FSM next state
+    //=====================================================
+    always_comb begin
+        next = estado;
+        case (estado)
+
+            IDLE:  if (start) next = LOAD;
+
+            LOAD:  next = SHIFT;
+
+            SHIFT: next = TRIAL;
+
+            TRIAL: next = UPDATE;
+
+            UPDATE: if (i == 2'd3)
+                        next = FIN;
+                    else
+                        next = SHIFT;
+
+            FIN:   next = IDLE;
+
+        endcase
+    end
+
+    //=====================================================
+    // Sequential logic
+    //=====================================================
+    always_ff @(posedge clk or negedge rst) begin
+        if (!rst) begin
+            estado  <= IDLE;
+            A       <= 0;
+            R       <= 0;
+            M       <= 0;
+            i       <= 0;
+            done    <= 0;
+            cociente <= 0;
+            resto <= 0;
+
+        end else begin
+            estado <= next;
+            done   <= 0;
+
+            case (estado)
+
+                IDLE: begin end
+
+                LOAD: begin
+                    A <= dividendo;
+                    M <= divisor;
+                    R <= 0;
+                    i <= 0;
+                end
+
+                SHIFT: begin
+                    R <= {R[3:0], A[3-i]}; // shift R left, bring next bit of A
+                end
+
+                TRIAL: begin
+                    trial <= R - {1'b0, M}; // (R - M)
+                end
+
+                UPDATE: begin
+                    if (trial[4] == 1) begin
+                        // Negative → restore
+                        R <= R;
+                        A[3-i] <= 1'b0; // Q bit = 0
+                    end else begin
+                        // Positive → accept
+                        R <= trial;
+                        A[3-i] <= 1'b1; // Q bit = 1
+                    end
+                    i <= i + 1;
+                end
+
+                FIN: begin
+                    cociente <= A;
+                    resto    <= R[3:0];
+                    done     <= 1;
+                end
+
+            endcase
+        end
+    end
+
+endmodule
