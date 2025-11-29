@@ -52,10 +52,17 @@ module tb_top_divisor_debug;
        end
     endtask
 
-    task send_hex(input [7:0] val);
+    task send_hex(input [3:0] val);
         begin
-            send_nibble(val[7:4]);   // nibble alto
-            send_nibble(val[3:0]);   // nibble bajo
+            // 1) Idle estable
+            fil = 4'hF;
+            repeat (3) @(posedge clk);
+            // 2) Valor real estable
+            fil = val;
+            repeat (3) @(posedge clk);
+            // 3) Vuelta a idle estable
+            fil = 4'hF;
+            repeat (3) @(posedge clk);
         end
     endtask
 
