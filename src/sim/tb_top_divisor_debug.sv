@@ -56,13 +56,13 @@ module tb_top_divisor_debug;
         begin
             // 1) Idle estable
             fil = 4'hF;
-            repeat (3) @(posedge clk);
+            repeat (10) @(posedge clk);
             // 2) Valor real estable
             fil = val;
-            repeat (3) @(posedge clk);
+            repeat (10) @(posedge clk);
             // 3) Vuelta a idle estable
             fil = 4'hF;
-            repeat (3) @(posedge clk);
+            repeat (10) @(posedge clk);
         end
     endtask
 
